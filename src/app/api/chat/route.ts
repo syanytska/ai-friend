@@ -8,19 +8,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // Save user message
+    // Ensure a user exists (guest for now)
+    const guest = await prisma.user.upsert({
+      where: { id: "guest" },
+      update: {},
+      create: { id: "guest", displayName: "Guest" },
+    });
+
+    // ✅ Save USER message WITH userId
     await prisma.message.create({
-      data: { role: "user", content: message },
+      data: { userId: guest.id, role: "user", content: message },
     });
 
     if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json(
-        { error: "No GROQ_API_KEY configured in .env.local" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "No GROQ_API_KEY configured" }, { status: 500 });
     }
 
-    // Talk to Groq
     const { default: Groq } = await import("groq-sdk");
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 
@@ -34,9 +37,9 @@ export async function POST(req: NextRequest) {
 
     const reply = completion.choices[0]?.message?.content ?? "(no reply)";
 
-    // Save assistant reply
+    // ✅ Save AI reply WITH userId
     await prisma.message.create({
-      data: { role: "assistant", content: reply },
+      data: { userId: guest.id, role: "assistant", content: reply },
     });
 
     return NextResponse.json({ reply });
