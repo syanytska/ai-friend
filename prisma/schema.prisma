@@ -13,29 +13,39 @@ enum Role {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  createdAt DateTime  @default(now())
+  id          String   @id
   displayName String?
-  memories  Memory[]
-  messages  Message[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt       // <-- FINAL: auto-updates on write
+
+  messages    Message[]
+  facts       Fact[]
 }
 
-model Memory {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  key       String
-  value     String
-  createdAt DateTime @default(now())
-
-  @@unique([userId, key])
-}
 
 model Message {
   id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
   role      Role
   content   String
   createdAt DateTime @default(now())
+
+  // NEW: link to User
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model Fact {
+  id        String   @id @default(cuid())
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // NEW: link to User
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, key])
 }
