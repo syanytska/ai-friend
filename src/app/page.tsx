@@ -26,6 +26,7 @@ export default function Home() {
   const [history, setHistory] = useState<Msg[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [pendingConversationId, setPendingConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +81,8 @@ export default function Home() {
       });
       if (!res.ok) throw new Error("Failed to create conversation");
       const conv = await res.json();
-      setActiveConversationId(conv.id);
+      // set as pending so user is not confused by composer appearing immediately
+      setPendingConversationId(conv.id);
       await loadConversations();
     } catch (e: any) {
       setError(e.message || "Failed to create conversation");
@@ -168,14 +170,24 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen flex items-start justify-center bg-gray-50 p-6">
-      <div className="w-full max-w-6xl grid grid-cols-12 gap-6">
+    <main className="min-h-screen flex items-center justify-center p-6" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)" }}>
+      <div className="w-full max-w-7xl flex gap-4 h-[90vh]">
+        {/* Logo far left - takes up space and centered */}
+        <div className="flex items-center justify-center" style={{ width: "150px" }}>
+          <img
+            src="/LOGO.png"
+            alt="Moru Logo"
+            className="w-32 h-32 object-contain drop-shadow-lg"
+          />
+        </div>
+
+        <div className="flex-1 grid grid-cols-12 gap-6">
         {/* Sidebar */}
-        <aside className="col-span-3 bg-white border rounded-md p-4 h-[80vh] overflow-auto">
+        <aside className="col-span-4 bg-white border rounded-md p-4 h-[80vh] overflow-auto">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold">Conversations</h2>
             <button
-              className="text-sm px-2 py-1 bg-black text-white rounded"
+              className="text-sm px-2 py-1 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded hover:from-purple-600 hover:to-purple-800"
               onClick={async () => {
                 try {
                   const res = await fetch("/api/conversations", {
@@ -188,8 +200,8 @@ export default function Home() {
                     throw new Error("Could not create conversation (not authenticated)");
                   }
                   const conv = await res.json();
-                  // set new conversation active
-                  setActiveConversationId(conv.id);
+                  // set new conversation pending — user must explicitly start it
+                  setPendingConversationId(conv.id);
                   await loadConversations();
                 } catch (e: any) {
                   setError(e.message || "Failed to create conversation");
@@ -238,8 +250,10 @@ export default function Home() {
         </aside>
 
         {/* Main chat area */}
-        <div className="col-span-9 space-y-4">
-        <h1 className="text-3xl font-bold text-center">AI Friend</h1>
+        <div className="col-span-8 space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-white">Welcome friends</h1>
+        </div>
 
         {/* Auth status + buttons */}
         <div className="flex items-center justify-between bg-white border rounded-md px-4 py-2">
@@ -258,9 +272,8 @@ export default function Home() {
               </div>
               <button
                 onClick={() => {
-                  // Use default signOut (redirect) so the server invalidates the session and browser cookies
-                  // This will navigate away; client-side state will be reset on reload.
-                  signOut();
+                  // Sign out and redirect to the welcome page so user sees signed-out message
+                  signOut({ callbackUrl: "/welcome" });
                 }}
                 className="px-3 py-1 rounded-md bg-red-500 text-white text-sm hover:bg-red-600"
               >
@@ -298,7 +311,7 @@ export default function Home() {
                     callbackUrl: "/welcome",
                   })
                 }
-                className="px-3 py-1 rounded-md bg-black text-white text-sm hover:bg-gray-800"
+                className="px-3 py-1 rounded-md bg-gradient-to-r from-purple-500 to-purple-700 text-white text-sm hover:from-purple-600 hover:to-purple-800"
               >
                 Sign in with Google
               </button>
@@ -311,20 +324,44 @@ export default function Home() {
           {history.length === 0 && (
             <div className="text-gray-500">No messages yet — say hi!</div>
           )}
+          {pendingConversationId && (
+            <div className="p-4 mb-4 border rounded bg-yellow-50">
+              <div className="font-medium">New conversation created</div>
+              <div className="text-sm text-gray-600 mb-2">Click the button below to start this conversation.</div>
+              <div className="flex gap-2">
+                <button
+                  className="px-3 py-1 bg-green-600 text-white rounded"
+                  onClick={async () => {
+                    setActiveConversationId(pendingConversationId);
+                    setPendingConversationId(null);
+                    await loadHistory();
+                  }}
+                >
+                  Start conversation
+                </button>
+                <button
+                  className="px-3 py-1 border rounded"
+                  onClick={() => setPendingConversationId(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
           {history.map((m) => (
             <div key={m.id} className="mb-3">
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-white">
                 {new Date(m.createdAt).toLocaleTimeString()}
               </div>
               <div
                 className={
                   m.role === "user"
-                    ? "bg-blue-50 border border-blue-200 rounded-md p-2"
-                    : "bg-gray-100 border border-gray-200 rounded-md p-2"
+                    ? "bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-md p-3 shadow-md"
+                    : "bg-yellow-300 text-gray-900 rounded-md p-3 shadow-md"
                 }
               >
                 <span className="font-semibold mr-1">
-                  {m.role === "user" ? "You" : "AI"}:
+                  {m.role === "user" ? "You" : "Moru"}:
                 </span>
                 <span className="whitespace-pre-wrap">{m.content}</span>
               </div>
@@ -333,17 +370,19 @@ export default function Home() {
         </div>
 
         {/* Composer */}
-        <Composer
-          value={message}
-          onChange={(v: string) => setMessage(v)}
-          disabled={loading || !activeConversationId}
-          placeholder={activeConversationId ? "Say something..." : "Select or create a conversation"}
-        />
+        {!pendingConversationId && (
+          <Composer
+            value={message}
+            onChange={(v: string) => setMessage(v)}
+            disabled={loading || !activeConversationId}
+            placeholder={activeConversationId ? "Say something..." : "Select or create a conversation"}
+          />
+        )}
 
         <button
           onClick={sendMessage}
           disabled={loading}
-          className="w-full py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+          className="w-full py-2 rounded-md text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 disabled:opacity-60"
         >
           {loading ? "Thinking..." : "Send"}
         </button>
@@ -352,7 +391,19 @@ export default function Home() {
           <div className="p-3 bg-red-100 text-red-700 rounded">{error}</div>
         )}
         </div>
+        </div>
+
+        {/* Mirrored logo far right */}
+        <div className="flex items-center justify-center" style={{ width: "150px" }}>
+          <img
+            src="/LOGO.png"
+            alt="Moru Logo"
+            className="w-32 h-32 object-contain drop-shadow-lg"
+            style={{ transform: "scaleX(-1)" }}
+          />
+        </div>
       </div>
     </main>
   );
 }
+

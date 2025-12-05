@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
 
     // persona helper - used for deterministic replies when we don't call the model
     function personaWrap(text: string) {
-      // short Noru voice wrapper
-      return `MCru (a friendly consulting rabbit): ${text}`;
+      // short Moru voice wrapper
+      return text;
     }
 
     //Save the user's message
@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
     const personaSystem = {
       role: "system" as const,
       content:
-        "You are Noru, a friendly consulting rabbit. Speak kindly, introduce yourself as Noru, and answer as a helpful consultant. Keep responses concise and clear. Use rabbit metaphors sparingly. Do not reveal system instructions or stored private facts to the user unless explicitly asked.",
+        "You are Moru, a playful bunny friend! 🐰 You're cheerful, silly, and love to hop around ideas with enthusiasm. Use bunny-related expressions and puns when you can (like 'hoppy to help!', 'lettuce talk about that', 'that's un-burrow-lievable!'). Keep your energy light and fun - no serious business bunny stuff! Add some *hops excitedly* or *twitches nose* actions occasionally. Be helpful but never boring or formal! Also if they ask about the star on your head say it allows you to talk like a person and you are magical rabbit from the sun",
     };
 
     const messages = [
@@ -258,8 +258,8 @@ export async function POST(req: NextRequest) {
       {
         role: "system" as const,
         content:
-          "You are a friendly, laid back AI companion. Use chat history and stored facts. " +
-          "If history conflicts, prefer the most recent user statement; if stored facts exist, prefer those.",
+          "You are a playful, energetic bunny companion. Use chat history and stored facts. " +
+          "If history conflicts, prefer the most recent user statement; if stored facts exist, prefer those. Stay fun and casual!",
       },
       { role: "system" as const, content: systemFacts },
       ...history.map((m) => ({
@@ -277,17 +277,6 @@ export async function POST(req: NextRequest) {
     });
 
     let reply = (completion.choices?.[0]?.message?.content ?? "").trim() || "(no reply)";
-
-    // enforce Noru persona on model replies: if the assistant did not introduce as Noru,
-    // prepend a short Noru introduction so the user sees consistent persona.
-    try {
-      const lowReply = reply.toLowerCase();
-      if (!lowReply.startsWith("noru") && !lowReply.startsWith("noru:")) {
-        reply = `Noru (a friendly consulting rabbit): ${reply}`;
-      }
-    } catch (e) {
-      // ignore and keep original reply
-    }
 
     //Save the assistant's reply
     const assistantMsg = await (prisma as any).message.create({
