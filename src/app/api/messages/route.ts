@@ -1,16 +1,36 @@
 // src/app/api/messages/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const userId = "guest";
+    const session = await getServerSession(authOptions as any);
+    const userId = (session as any)?.user?.id;
 
-    const messages = await prisma.message.findMany({
-      where: { userId },
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const conversationId = req.nextUrl.searchParams.get("conversationId");
+    if (!conversationId) {
+      return NextResponse.json({ error: "conversationId is required" }, { status: 400 });
+    }
+
+    // Verify conversation belongs to user
+  const conv = await (prisma as any).conversation.findUnique({ where: { id: conversationId } });
+    if (!conv || conv.userId !== userId) {
+      return NextResponse.json({ error: "Conversation not found or unauthorized" }, { status: 404 });
+    }
+
+    const messages = await (prisma as any).message.findMany({
+      where: { conversationId },
       orderBy: { createdAt: "asc" },
-      take: 200, // adjust as needed
+      take: 500,
     });
+
+    console.log("GET /api/messages", { userId, conversationId, count: messages.length });
 
     return NextResponse.json(messages);
   } catch (err: any) {

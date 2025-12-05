@@ -1,3 +1,4 @@
+// src/lib/auth.ts
 import "server-only";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
@@ -5,17 +6,17 @@ import { prisma } from "@/lib/db";
 const COOKIE = "af_uid";
 
 export async function getOrCreateUserId() {
-  const jar = cookies();                          // no await
-  let id = jar.get(COOKIE)?.value ?? null;
+  // Some Next versions type this as Promise<ReadonlyRequestCookies>
+  const jar = await cookies(); // ← add await
+  const existing = jar.get(COOKIE)?.value ?? null;
 
-  const exists = id ? await prisma.user.findUnique({ where: { id } }) : null;
-
-  if (!id || !exists) {
-    const user = await prisma.user.create({ data: {} });
-    id = user.id;
-
-    jar.set(COOKIE, id);                          // simple set
+  if (existing) {
+    const found = await prisma.user.findUnique({ where: { id: existing } });
+    if (found) return { id: existing, needsCookie: false };
   }
-
-  return id!;
+  // Create a new user. The schema provides defaults for id/createdAt/updatedAt,
+  // but TypeScript may complain about an empty object for the generated create type.
+  // Cast to `any` as a minimal, low-risk workaround to satisfy the compiler.
+  const user = await prisma.user.create({ data: {} as any });
+  return { id: user.id, needsCookie: true };
 }
