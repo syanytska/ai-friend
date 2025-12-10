@@ -98,7 +98,33 @@ npx prisma migrate dev --name init
 ```bash
 npm run dev
 ```
-
+###Troubleshooting (Windows / PowerShell)
+If you run npm install and see this error:
+```bash
+File C:\Program Files\nodejs\npm.ps1 cannot be loaded because running scripts is disabled on this system.
+For more information, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170.
+```
+it’s a PowerShell security setting, not a problem with Node or this project.
+You can fix it in one of these ways:
+✅## Option 1 (recommended): Use Command Prompt instead of PowerShell
+#Open Command Prompt (not PowerShell).
+#Navigate to the project folder:
+```bash
+cd C:\Users\user\Downloads\ai-friend-main
+```
+Run:
+```bash
+npm install
+npm run dev
+```
+✅ Option 2: Temporarily allow scripts in the current PowerShell window
+If you prefer using PowerShell, run this in the same PowerShell window before npm install:
+```bash
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+npm install
+npm run dev
+```
+This only affects that one PowerShell session and closes when you exit the window.
 Open [http://localhost:3000](http://localhost:3000) in your browser!
 
 ## 🎮 How It Works
